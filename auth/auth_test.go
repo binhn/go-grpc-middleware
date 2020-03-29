@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/auth"
-	"github.com/grpc-ecosystem/go-grpc-middleware/testing"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	grpc_testing "github.com/grpc-ecosystem/go-grpc-middleware/testing"
 	pb_testproto "github.com/grpc-ecosystem/go-grpc-middleware/testing/testproto"
 	"github.com/grpc-ecosystem/go-grpc-middleware/util/metautils"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +42,9 @@ func buildDummyAuthFunction(expectedScheme string, expectedToken string) func(ct
 		}
 		if token != expectedToken {
 			return nil, status.Errorf(codes.PermissionDenied, "buildDummyAuthFunction bad token")
+		}
+		if methodName := ctx.Value(grpc_auth.KeyMethodName); methodName == nil {
+			return nil, status.Errorf(codes.InvalidArgument, "buildDummyAuthFunction full method name not found")
 		}
 		return context.WithValue(ctx, authedMarker, "marker_exists"), nil
 	}

@@ -6,7 +6,7 @@ package grpc_auth
 import (
 	"context"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"google.golang.org/grpc"
 )
 
@@ -31,15 +31,21 @@ type ServiceAuthFuncOverride interface {
 	AuthFuncOverride(ctx context.Context, fullMethodName string) (context.Context, error)
 }
 
+// KeyMethodName is used as context key whose value is the full method name
+const KeyMethodName contextKey = "method-name"
+
+type contextKey string
+
 // UnaryServerInterceptor returns a new unary server interceptors that performs per-request auth.
 func UnaryServerInterceptor(authFunc AuthFunc) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 		var newCtx context.Context
+		newCtx = context.WithValue(ctx, KeyMethodName, info.FullMethod)
 		var err error
 		if overrideSrv, ok := info.Server.(ServiceAuthFuncOverride); ok {
-			newCtx, err = overrideSrv.AuthFuncOverride(ctx, info.FullMethod)
+			newCtx, err = overrideSrv.AuthFuncOverride(newCtx, info.FullMethod)
 		} else {
-			newCtx, err = authFunc(ctx)
+			newCtx, err = authFunc(newCtx)
 		}
 		if err != nil {
 			return nil, err
@@ -52,11 +58,12 @@ func UnaryServerInterceptor(authFunc AuthFunc) grpc.UnaryServerInterceptor {
 func StreamServerInterceptor(authFunc AuthFunc) grpc.StreamServerInterceptor {
 	return func(srv interface{}, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		var newCtx context.Context
+		newCtx = context.WithValue(stream.Context(), KeyMethodName, info.FullMethod)
 		var err error
 		if overrideSrv, ok := srv.(ServiceAuthFuncOverride); ok {
-			newCtx, err = overrideSrv.AuthFuncOverride(stream.Context(), info.FullMethod)
+			newCtx, err = overrideSrv.AuthFuncOverride(newCtx, info.FullMethod)
 		} else {
-			newCtx, err = authFunc(stream.Context())
+			newCtx, err = authFunc(newCtx)
 		}
 		if err != nil {
 			return err
