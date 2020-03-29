@@ -3,8 +3,8 @@ package grpc_auth_test
 import (
 	"context"
 
-	"github.com/grpc-ecosystem/go-grpc-middleware/auth"
-	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
+	grpc_auth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -20,7 +20,7 @@ func userClaimFromToken(struct{}) string {
 
 // Simple example of server initialization code.
 func Example_serverConfig() {
-	exampleAuthFunc := func(ctx context.Context) (context.Context, error) {
+	exampleAuthFunc := func(ctx context.Context, fullMethodName string) (context.Context, error) {
 		token, err := grpc_auth.AuthFromMD(ctx, "bearer")
 		if err != nil {
 			return nil, err
